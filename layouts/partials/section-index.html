@@ -6,7 +6,6 @@
     {{ $pages = where $pages "Type" "!=" "search" }}
     {{ $pages = where $pages ".Params.hide_summary" "!=" true }}
     {{ $pages = where $pages ".Parent" "!=" nil }}
-
     {{/* Filter by parent file if parent has a file */}}
     {{ if and $parent $parent.File }}
         {{ $parentFileID := $parent.File.UniqueID }}
@@ -30,6 +29,7 @@
     {{/* Get all pages where onlyWhenNot is set */}}
     {{ $pagesOnlyWhenNot := where $pages ".Params.onlyWhenNot" "in" site.Params.enabledModule }}
     {{/* Get all pages where onlyWhenNot is nil and combine them with the above */}}
+    {{ $pagesOnlyWhenNotNil := where $pages ".Params.onlyWhenNot" "==" nil }}
     {{ $pages = complement $pagesOnlyWhenNot $pages }}
 
     {{/* Sort by weight using range/sort */}}
