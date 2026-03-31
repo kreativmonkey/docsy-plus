@@ -1,9 +1,11 @@
 {{/* Copied and adapted from themes/docsy/layouts/partials/sidebar-tree.html */}}
 {{/* We cache this partial for bigger sites and set the active class client side. */ -}}
 {{ $sidebarCacheLimit := site.Params.ui.sidebar_cache_limit | default 2000 -}}
-{{ $shouldDelayActive := ge (len site.Pages) $sidebarCacheLimit -}}
+{{ $pageCount := 0 }}{{ with site.Pages }}{{ $pageCount = len . }}{{ end -}}
+{{ $shouldDelayActive := ge $pageCount $sidebarCacheLimit -}}
 <div id="td-sidebar-menu" class="td-sidebar__inner{{ if $shouldDelayActive }} d-none{{ end }}">
-  {{ if not site.Params.ui.sidebar_search_disable -}}
+  {{ $sidebarSearchDisabled := false }}{{ with site.Params.ui.sidebar_search_disable }}{{ $sidebarSearchDisabled = . }}{{ end -}}
+  {{ if not $sidebarSearchDisabled -}}
   <form class="td-sidebar__search d-flex align-items-center">
     {{ partial "search-input.html" . }}
     <button class="btn btn-link td-sidebar__toggle d-md-none p-0 ms-3 fas fa-bars" type="button" data-bs-toggle="collapse" data-bs-target="#td-section-nav" aria-controls="td-section-nav" aria-expanded="false" aria-label="Toggle section navigation">
@@ -23,7 +25,8 @@
       {{- if site.Params.ui.sidebar_search_disable }} td-sidebar-nav--search-disabled{{ end -}}
       {{- if site.Params.ui.sidebar_menu_foldable }} foldable-nav{{ end -}}
       " id="td-section-nav">
-    {{ if  (gt (len site.Home.Translations) 0) -}}
+    {{ $translations := 0 }}{{ with site.Home.Translations }}{{ $translations = len . }}{{ end -}}
+    {{ if gt $translations 0 -}}
     <div class="td-sidebar-nav__section nav-item dropdown d-block d-lg-none">
       {{ partial "navbar-lang-selector.html" . }}
     </div>
