@@ -54,8 +54,8 @@
 {{ $ulNr := .ulNr -}}
 {{ $ulShow := .ulShow -}}
 {{ $active := and (not $shouldDelayActive) (eq $s $p) -}}
-{{ $activePath := and (not $shouldDelayActive) (or (eq $p $s) ($p.IsDescendant $s)) -}}
-{{ $show := cond (or (lt $ulNr $ulShow) $activePath (and (not $shouldDelayActive) (eq $s.Parent $p.Parent)) (and (not $shouldDelayActive) (eq $s.Parent $p)) (not site.Params.ui.sidebar_menu_compact) (and (not $shouldDelayActive) ($p.IsDescendant $s.Parent))) true false -}}
+{{ $activePath := and (not $shouldDelayActive) (or (eq $p $s) ($s.IsDescendant $p)) -}}
+{{ $show := cond (or (lt $ulNr $ulShow) $activePath (and (not $shouldDelayActive) (eq $s.Parent $p.Parent)) (and (not $shouldDelayActive) (eq $s.Parent $p)) (not site.Params.ui.sidebar_menu_compact) (and (not $shouldDelayActive) ($p.Parent.IsDescendant $p))) true false -}}
 {{ $mid := printf "m-%s" ($s.RelPermalink | anchorize) -}}
 {{ $pages_tmp := where (union $s.Pages $s.Sections).ByWeight ".Params.toc_hide" "!=" true -}}
 {{ $pages := $pages_tmp | first $sidebarMenuTruncate -}}
