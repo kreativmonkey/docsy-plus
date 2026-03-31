@@ -2,34 +2,56 @@
 {{- $sectionnumbers := partialCached "sectionnumber.html" . .File.Path -}}
 <div class="section-index">
     {{ $parent := .Page -}}
-    {{ $pages := (where .Site.Pages "Section" .Section).ByWeight -}}
-    {{ $pages = (where $pages "Type" "!=" "search") }}
-    {{ $pages = (where $pages ".Params.hide_summary" "!=" true) -}}
-    {{ $pages = (where $pages ".Parent" "!=" nil) -}}
-    {{ if and .Parent .Parent.File -}}
-        {{ $pages = (where $pages "Parent.File.UniqueID" "==" $parent.File.UniqueID) }}
+    {{ $pages := where site.Pages "Section" .Section }}
+    {{ $pages = where $pages "Type" "!=" "search" }}
+    {{ $pages = where $pages ".Params.hide_summary" "!=" true }}
+    {{ $pages = where $pages ".Parent" "!=" nil }}
+    {{/* Filter by parent file if parent has a file */}}
+    {{ if and $parent $parent.File }}
+        {{ $parentFileID := $parent.File.UniqueID }}
+        {{ $filteredPages := slice }}
+        {{ range $pages }}
+            {{ if and .Parent .Parent.File }}
+                {{ if eq .Parent.File.UniqueID $parentFileID }}
+                    {{ $filteredPages = $filteredPages | append . }}
+                {{ end }}
+            {{ end }}
+        {{ end }}
+        {{ $pages = $filteredPages }}
     {{ end -}}
 
     {{/* Get all pages where onlyWhen is set */}}
     {{ $pagesOnlyWhen := where $pages ".Params.onlyWhen" "in" site.Params.enabledModule }}
     {{/* Get all pages where onlyWhen is nil and combine them with the above */}}
-    {{ $pages = union $pagesOnlyWhen (where $pages ".Params.onlyWhen" "==" nil) }}
+    {{ $pagesOnlyWhenNil := where $pages ".Params.onlyWhen" "==" nil }}
+    {{ $pages = union $pagesOnlyWhen $pagesOnlyWhenNil }}
 
     {{/* Get all pages where onlyWhenNot is set */}}
     {{ $pagesOnlyWhenNot := where $pages ".Params.onlyWhenNot" "in" site.Params.enabledModule }}
     {{/* Get all pages where onlyWhenNot is nil and combine them with the above */}}
+    {{ $pagesOnlyWhenNotNil := where $pages ".Params.onlyWhenNot" "==" nil }}
     {{ $pages = complement $pagesOnlyWhenNot $pages }}
 
-    {{/* Sort the pages again */}}
-    {{ $pages = $pages.ByWeight }}
+    {{/* Sort by weight using range/sort */}}
+    {{ $sortedPages := slice }}
+    {{ range sort $pages "Weight" "asc" }}
+        {{ $sortedPages = $sortedPages | append . }}
+    {{ end }}
 
-    {{ if or $parent.Params.no_list (eq (len $pages) 0) }}
+    {{ if or $parent.Params.no_list (eq (len $sortedPages) 0) }}
     {{/* If no_list is true or we don't have subpages we don't show a list of subpages */}}
     {{ else if $parent.Params.simple_list -}}
     {{/* If simple_list is true we show a bulleted list of subpages */}}
         <ul>
-            {{ range $pages -}}
-                {{ $manualLink := cond (isset .Params "manuallink") .Params.manualLink ( cond (isset .Params "manuallinkrelref") (relref . .Params.manualLinkRelref) .RelPermalink) }}
+            {{ range $sortedPages -}}
+                {{ $manualLink := .RelPermalink }}
+                {{ if isset .Params "manuallink" }}
+                    {{ $manualLink = .Params.manualLink }}
+                {{ else if isset .Params "manuallinkrelref" }}
+                    {{ with .Params.manualLinkRelref }}
+                        {{ $manualLink = relref $.Page . }}
+                    {{ end }}
+                {{ end }}
                 {{- $title := .Title -}}
                 {{- if site.Params.automaticSectionNumbers -}}
                     {{- $title = printf "%s %s" ($sectionnumbers.Get .File.Path) .Title -}}
@@ -40,8 +62,15 @@
     {{ else -}}
     {{/* Otherwise we show a nice formatted list of subpages with page descriptions */}}
     <hr class="panel-line">
-        {{ range $pages -}}
-            {{ $manualLink := cond (isset .Params "manuallink") .Params.manualLink ( cond (isset .Params "manuallinkrelref") (relref . .Params.manualLinkRelref) .RelPermalink) }}
+        {{ range $sortedPages -}}
+            {{ $manualLink := .RelPermalink }}
+            {{ if isset .Params "manuallink" }}
+                {{ $manualLink = .Params.manualLink }}
+            {{ else if isset .Params "manuallinkrelref" }}
+                {{ with .Params.manualLinkRelref }}
+                    {{ $manualLink = relref $.Page . }}
+                {{ end }}
+            {{ end }}
             <div class="entry">
                 <h5>
                     {{- $title := .Title -}}
