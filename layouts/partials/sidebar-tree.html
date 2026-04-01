@@ -1,20 +1,34 @@
 {{/* Copied and adapted from themes/docsy/layouts/partials/sidebar-tree.html */}}
+{{/* ACEND DOCSY-PLUS VERSION WITH HUGO 0.150+ SUPPORT */ -}}
 {{/* We cache this partial for bigger sites and set the active class client side. */ -}}
+
+{{ $page := . }}
+{{ $cacheSidebar := false }}
+{{ $sidebarRoot := false }}
+{{ if isset . "context" }}
+  {{ $page = .context }}
+  {{ $cacheSidebar = .cacheSidebar }}
+  {{ $sidebarRoot = .sidebarRoot }}
+{{ end }}
+
 {{ $sidebarCacheLimit := site.Params.ui.sidebar_cache_limit | default 2000 -}}
 {{ $pageCount := 0 }}{{ with site.Pages }}{{ $pageCount = len . }}{{ end -}}
 {{ $shouldDelayActive := ge $pageCount $sidebarCacheLimit -}}
+{{ if $cacheSidebar }}
+  {{ $shouldDelayActive = $cacheSidebar }}
+{{ end }}
 <div id="td-sidebar-menu" class="td-sidebar__inner{{ if $shouldDelayActive }} d-none{{ end }}">
   {{ $sidebarSearchDisabled := false }}{{ with site.Params.ui.sidebar_search_disable }}{{ $sidebarSearchDisabled = . }}{{ end -}}
   {{ if not $sidebarSearchDisabled -}}
   <form class="td-sidebar__search d-flex align-items-center">
-    {{ partial "search-input.html" . }}
+    {{ partial "search-input.html" $page }}
     <button class="btn btn-link td-sidebar__toggle d-md-none p-0 ms-3 fas fa-bars" type="button" data-bs-toggle="collapse" data-bs-target="#td-section-nav" aria-controls="td-section-nav" aria-expanded="false" aria-label="Toggle section navigation">
     </button>
   </form>
   {{ else -}}
   <div id="content-mobile">
   <form class="td-sidebar__search d-flex align-items-center">
-    {{ partial "search-input.html" . }}
+    {{ partial "search-input.html" $page }}
     <button class="btn btn-link td-sidebar__toggle d-md-none p-0 ms-3 fas fa-bars" type="button" data-bs-toggle="collapse" data-bs-target="#td-section-nav" aria-controls="td-section-nav" aria-expanded="false" aria-label="Toggle section navigation">
     </button>
   </form>
@@ -31,12 +45,12 @@
       {{ partial "navbar-lang-selector.html" . }}
     </div>
     {{ end -}}
-    {{ $navRoot := cond (and (ne .Params.toc_root true) (eq site.Home.Type "docs")) site.Home .FirstSection -}}
-    {{ $ulNr := 0 -}}
-    {{ $ulShow := site.Params.ui.ul_show | default 1 -}}
-    {{ $sidebarMenuTruncate := site.Params.ui.sidebar_menu_truncate | default 50 -}}
-    <ul class="td-sidebar-nav__section pe-md-3 ul-{{ $ulNr }}">
-      {{ template "section-tree-nav-section" (dict "page" . "section" $navRoot "shouldDelayActive" $shouldDelayActive "sidebarMenuTruncate" $sidebarMenuTruncate "ulNr" $ulNr "ulShow" (add $ulShow 1)) }}
+{{ $navRoot := cond (and (ne $page.Params.toc_root true) (eq site.Home.Type "docs")) site.Home $page.FirstSection -}}
+{{ $ulNr := 0 -}}
+{{ $ulShow := site.Params.ui.ul_show | default 1 -}}
+{{ $sidebarMenuTruncate := site.Params.ui.sidebar_menu_truncate | default 50 -}}
+<ul class="td-sidebar-nav__section pe-md-3 ul-{{ $ulNr }}">
+      {{ template "section-tree-nav-section" (dict "page" $page "section" $navRoot "shouldDelayActive" $shouldDelayActive "sidebarMenuTruncate" $sidebarMenuTruncate "ulNr" $ulNr "ulShow" (add $ulShow 1)) }}
     </ul>
   </nav>
 </div>
@@ -54,21 +68,18 @@
 {{ $ulNr := .ulNr -}}
 {{ $ulShow := .ulShow -}}
 {{ $active := and (not $shouldDelayActive) (eq $s $p) -}}
-{{ $activePath := and (not $shouldDelayActive) (or (eq $p $s) ($s.IsDescendant $p)) -}}
-{{ $show := cond (or (lt $ulNr $ulShow) $activePath (and (not $shouldDelayActive) (eq $s.Parent $p.Parent)) (and (not $shouldDelayActive) (eq $s.Parent $p)) (not site.Params.ui.sidebar_menu_compact) (and (not $shouldDelayActive) ($p.Parent.IsDescendant $p))) true false -}}
+{{ $activePath := and (not $shouldDelayActive) (or (eq $p $s) ($p.IsDescendant $s)) -}}
+{{ $show := cond (or (lt $ulNr $ulShow) $activePath (and (not $shouldDelayActive) (eq $s.Parent $p.Parent)) (and (not $shouldDelayActive) (eq $s.Parent $p)) (not site.Params.ui.sidebar_menu_compact) (and (not $shouldDelayActive) ($p.IsDescendant $s.Parent))) true false -}}
 {{ $mid := printf "m-%s" ($s.RelPermalink | anchorize) -}}
-{{ $allPages := union $s.Pages $s.Sections }}
-{{ $pages := slice }}
-{{ range $allPages }}
-  {{ if ne .Params.toc_hide true }}
-    {{ $pages = $pages | append . }}
-  {{ end }}
-{{ end }}
-{{ $sortedPages := slice }}
-{{ range sort $pages "Weight" "asc" }}
-  {{ $sortedPages = $sortedPages | append . }}
-{{ end }}
-{{ $pages := first $sidebarMenuTruncate $sortedPages }}
+{{ $pages_tmp := where (union $s.Pages $s.Sections).ByWeight ".Params.toc_hide" "!=" true -}}
+{{ $pages := $pages_tmp | first $sidebarMenuTruncate -}}
+{{ $truncatedEntryCount := sub (len $pages_tmp) $sidebarMenuTruncate -}}
+
+{{ if gt $truncatedEntryCount 0 -}}
+  {{ warnf "WARNING: %d sidebar entries have been truncated. To avoid this, increase `params.ui.sidebar_menu_truncate` to at least %d (from %d) in your config file. Section: %s"
+      $truncatedEntryCount (len $pages_tmp) $sidebarMenuTruncate  $s.Path -}}
+{{ end -}}
+
 {{ $withChild := gt (len $pages) 0 -}}
 {{ $manualLink := false }}
 {{ if isset $s.Params "manuallink" }}
