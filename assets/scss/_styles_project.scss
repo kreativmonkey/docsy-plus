@@ -1,20 +1,20 @@
 @import "styles_project_custom";
 
 .alert-info{
- background: #dbe6eb;
+ background: tint-color($primary, 85%);
 }
 
 .alert-warning{
- background: #ffe4c9;
+ background: tint-color($warning, 70%);
 }
 
 .alert-danger{
- background: #ffb5b5;
+ background: tint-color($danger, 65%);
 }
 
 /* details elements */
 details {
-    border: 1px solid $gray-200;
+    border: 1px solid rgba(var(--bs-secondary-rgb), .3);
     border-radius: 4px;
     padding: .5em .5em 0;
     margin-bottom: 1em;
@@ -28,7 +28,7 @@ summary {
 }
 
 details[open].normalmode{
-  border: 0px solid $gray-200;
+  border: 0px solid var(--bs-secondary-bg);
   border-radius: 0px;
   padding: 0em;
   margin: 0em;
@@ -78,10 +78,10 @@ details[open].normalmode > summary{
     border-radius: 50%;
   }
   input:checked + .slider {
-    background-color: lighten($primary, 15%);
+    background-color: $primary;
   }
   input:focus + .slider {
-    box-shadow: 0 0 1px lighten($primary, 15%);
+    box-shadow: 0 0 1px $primary;
   }
   input:checked + .slider:before {
     -webkit-transform: translateX(26px);
