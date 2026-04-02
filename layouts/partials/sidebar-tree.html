@@ -76,51 +76,109 @@
 {{ $ulShow := .ulShow -}}
 {{ $active := and (not $shouldDelayActive) (eq $s $p) -}}
 {{ $activePath := and (not $shouldDelayActive) (or (eq $p $s) ($p.IsDescendant $s)) -}}
-{{ $show := cond (or (lt $ulNr $ulShow) $activePath (and (not $shouldDelayActive) (eq $s.Parent $p.Parent)) (and (not $shouldDelayActive) (eq $s.Parent $p)) (not $p.Site.Params.ui.sidebar_menu_compact) (and (not $shouldDelayActive) ($p.IsDescendant $s.Parent))) true false -}}
+{{ $show := cond
+      (or
+        (lt $ulNr $ulShow)
+        $activePath
+        (and (not $shouldDelayActive) (eq $s.Parent $p.Parent))
+        (and (not $shouldDelayActive) (eq $s.Parent $p))
+        (not $p.Site.Params.ui.sidebar_menu_compact)
+        (and (not $shouldDelayActive) ($p.IsDescendant $s.Parent))
+      )
+      true false
+}}
 {{ $mid := printf "m-%s" ($s.RelPermalink | anchorize) -}}
-{{ $allPages := union $s.Pages $s.Sections }}
-{{ $pages := slice }}
-{{ range $allPages }}
-  {{ if ne .Params.toc_hide true }}
-    {{ $pages = $pages | append . }}
-  {{ end }}
-{{ end }}
-{{ $sortedPages := sort $pages "Weight" "asc" }}
-{{ $pages := first $sidebarMenuTruncate $sortedPages }}
-{{ $withChild := gt (len $pages) 0 }}
+{{ $pages_tmp := where (union $s.Pages $s.Sections).ByWeight "Params.toc_hide" "!=" true -}}
+{{ $pages := $pages_tmp | first $sidebarMenuTruncate -}}
+{{ $truncatedEntryCount := sub (len $pages_tmp) $sidebarMenuTruncate -}}
 
-<li class="td-sidebar-nav__section-title td-sidebar-nav__section{{ if $withChild }} with-child{{ else }} without-child{{ end }}{{ if $activePath }} active-path{{ end }}" id="{{ $mid }}-li">
-  <a href="{{ $s.RelPermalink }}" class="align-left ps-0 td-sidebar-link{{ if $s.IsPage }} td-sidebar-link__page{{ else }} td-sidebar-link__section{{ end }}{{ if eq $ulNr 0 }} tree-root{{ end }}" id="{{ $mid }}">
-    <span>{{ $s.LinkTitle }}</span>
-  </a>
-  {{ if $withChild }}
-  <ul class="ul-{{ add $ulNr 1 }}">
-    {{ range $pages }}
-      {{ template "section-tree-nav-section" (dict "page" $p "section" . "shouldDelayActive" $shouldDelayActive "sidebarMenuTruncate" $sidebarMenuTruncate "ulNr" (add $ulNr 1) "ulShow" $ulShow) }}
-    {{ end }}
-  </ul>
-  {{ end }}
-{{ else }}
-  {{ $manualLink = $s.RelPermalink }}
-{{ end }}
-{{ $manualLinkTitle := cond (isset $s.Params "manuallinktitle") $s.Params.manualLinkTitle $s.Title -}}
-<li class="td-sidebar-nav__section-title td-sidebar-nav__section{{ if $withChild }} with-child{{ else }} without-child{{ end }}{{ if $activePath }} active-path{{ end }}{{ if (not (or $show $p.Site.Params.ui.sidebar_menu_foldable )) }} collapse{{ end }}" id="{{ $mid }}-li">
+{{ if gt $truncatedEntryCount 0 -}}
+  {{ warnf "WARNING: %d sidebar entries have been truncated. To avoid this, increase `params.ui.sidebar_menu_truncate` to at least %d (from %d) in your config file. Section: %s"
+      $truncatedEntryCount (len $pages_tmp) $sidebarMenuTruncate  $s.Path -}}
+{{ end -}}
+
+{{ $withChild := gt (len $pages) 0 -}}
+{{ $manualLink :=
+    cond
+      (isset $s.Params "manuallink")
+      $s.Params.manuallink
+      (cond
+        (isset $s.Params "manuallinkrelref")
+        (relref $s $s.Params.manualLinkRelref)
+        $s.RelPermalink
+      )
+}}
+{{ $manualLinkTitle :=
+    cond
+      (isset $s.Params "manuallinktitle")
+      $s.Params.manualLinkTitle
+      $s.Title
+}}
+{{ if and $treeRoot (eq $s.Params.sidebar_root_for "self") -}}
+  {{ with $s.Parent -}}
+    {{ $manualLink = .RelPermalink -}}
+  {{ end -}}
+{{ end -}}
+<li class="td-sidebar-nav__section-title td-sidebar-nav__section
+      {{- if $withChild }} with-child{{ else }} without-child{{ end -}}
+      {{ if $activePath }} active-path{{ end -}}
+      {{ if (not (or $show $p.Site.Params.ui.sidebar_menu_foldable )) }} collapse{{ end -}}
+    " {{/**/ -}}
+    id="{{ $mid }}-li" {{- /**/ -}}
+  >
   {{ if (and $p.Site.Params.ui.sidebar_menu_foldable (ge $ulNr 1)) -}}
-  <input type="checkbox" id="{{ $mid }}-check"{{ if $activePath}} checked{{ end }}/>
-  <label for="{{ $mid }}-check"><a href="{{ $manualLink }}"{{ if ne $s.LinkTitle $manualLinkTitle }} title="{{ $manualLinkTitle }}"{{ end }}{{ with $s.Params.manualLinkTarget }} target="{{ . }}"{{ if eq . "_blank" }} rel="noopener"{{ end }}{{ end }} class="align-left ps-0 {{ if $active}} active{{ end }} td-sidebar-link{{ if $s.IsPage }} td-sidebar-link__page{{ else }} td-sidebar-link__section{{ end }}{{ if $treeRoot }} tree-root{{ end }}" id="{{ $mid }}">{{ with $s.Params.Icon}}<i class="{{ . }}"></i>{{ end }}<span class="{{ if $active }}td-sidebar-nav-active-item{{ end }}">{{ with $sectionnumber }}{{ . }} {{ end }}{{ $s.LinkTitle }}</span></a></label>
+    <input type="checkbox" id="{{ $mid }}-check"{{ if $activePath}} checked{{ end }}/>
+    <label for="{{ $mid }}-check">
+      <a href="{{ $manualLink }}"
+        {{- if ne $s.LinkTitle $manualLinkTitle }} title="{{ $manualLinkTitle }}"{{ end -}}
+        {{ with $s.Params.manualLinkTarget }} target="{{ . }}"{{ if eq . "_blank" }} rel="noopener"{{ end }}{{ end }}
+        class="align-left ps-0 {{ if $active}} active{{ end }} td-sidebar-link
+          {{- if $s.IsPage }} td-sidebar-link__page{{ else }} td-sidebar-link__section{{ end }}
+          {{- if $treeRoot }} tree-root{{ end }}"
+        id="{{ $mid }}"
+      >
+        {{- with $s.Params.Icon -}}
+          <i class="{{ . }}"></i>
+        {{- end -}}
+        <span class="{{ if $active }}td-sidebar-nav-active-item{{ end }}">
+          {{- with $sectionnumber }}{{ . }} {{ end }}{{ $s.LinkTitle -}}
+        </span>
+      </a>
+    </label>
   {{ else -}}
-  <a href="{{ $manualLink }}"{{ if ne $s.LinkTitle $manualLinkTitle }} title="{{ $manualLinkTitle }}"{{ end }}{{ with $s.Params.manualLinkTarget }} target="{{ . }}"{{ if eq . "_blank" }} rel="noopener"{{ end }}{{ end }} class="align-left ps-0{{ if $active}} active{{ end }} td-sidebar-link{{ if $s.IsPage }} td-sidebar-link__page{{ else }} td-sidebar-link__section{{ end }}{{ if $treeRoot }} tree-root{{ end }}" id="{{ $mid }}">{{ with $s.Params.Icon}}<i class="{{ . }}"></i>{{ end }}<span class="{{ if $active }}td-sidebar-nav-active-item{{ end }}">{{ with $sectionnumber }}{{ . }} {{ end }}{{ $s.LinkTitle }}</span></a>
-  {{- end }}
-  {{- if $withChild }}
-  {{- $ulNr := add $ulNr 1 }}
-  <ul class="ul-{{ $ulNr }}{{ if (gt $ulNr 1)}} foldable{{end}}">
-    {{ range $pages -}}
-      {{ $onlyWhen := default "base" .Params.onlyWhen }}
-      {{ if and (in .Site.Params.enabledModule $onlyWhen) (not (in .Site.Params.enabledModule .Params.onlyWhenNot)) }}
-      {{ if (not (and (eq $s $p.Site.Home) (eq .Params.toc_root true))) -}}
-        {{ template "section-tree-nav-section" (dict "page" $p "section" . "shouldDelayActive" $shouldDelayActive "sidebarMenuTruncate" $sidebarMenuTruncate "ulNr" $ulNr "ulShow" $ulShow) }}
+    <a href="{{ $manualLink }}"
+      {{- if ne $s.LinkTitle $manualLinkTitle }} title="{{ $manualLinkTitle }}"{{ end -}}
+      {{ with $s.Params.manualLinkTarget }} target="{{ . }}"{{ if eq . "_blank" }} rel="noopener"{{ end }}{{ end }}
+      class="align-left ps-0
+        {{- if $active}} active{{ end }}
+        td-sidebar-link
+        {{- if $s.IsPage }} td-sidebar-link__page{{ else }} td-sidebar-link__section{{ end }}
+        {{- if $treeRoot }} tree-root{{ end }}"
+      id="{{ $mid }}"
+    >
+      {{- with $s.Params.Icon -}}
+        <i class="{{ . }}"></i>
+      {{- end -}}
+      <span class="
+        {{- if $active }}td-sidebar-nav-active-item{{ end -}}
+        {{- if and $treeRoot $s.Params.sidebar_root_for site.Params.ui.sidebar_root_enabled }} td-sidebar-root-up-icon{{ end -}}
+      ">
+        {{- with $sectionnumber }}{{ . }} {{ end }}{{ $s.LinkTitle -}}
+      </span>
+    </a>
+  {{- end -}}
+  {{ if $withChild -}}
+    {{ $ulNr := add $ulNr 1 }}
+    <ul class="ul-{{ $ulNr }}{{ if (gt $ulNr 1)}} foldable{{end}}">
+      {{ range $pages -}}
+        {{ $onlyWhen := default "base" .Params.onlyWhen }}
+        {{ if and (in .Site.Params.enabledModule $onlyWhen) (not (in .Site.Params.enabledModule .Params.onlyWhenNot)) }}
+          {{ if (not (and (eq $s $p.Site.Home) (eq .Params.toc_root true))) -}}
+            {{ template "section-tree-nav-section" (dict "page" $p "section" . "shouldDelayActive" $shouldDelayActive "sidebarMenuTruncate" $sidebarMenuTruncate "ulNr" $ulNr "ulShow" $ulShow) }}
+          {{- end }}
+        {{- end }}
       {{- end }}
     </ul>
-    {{- end }}
+  {{- end }}
   </li>
 {{- end }}
