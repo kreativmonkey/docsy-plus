@@ -1,0 +1,21 @@
+.click-to-copy {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 10;
+}
+
+.td-click-to-copy {
+  color: #6c757d;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+}
+
+.td-click-to-copy:hover {
+  color: #343a40;
+}
+
+.highlight {
+  position: relative;
+}
