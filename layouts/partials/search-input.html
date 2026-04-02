@@ -1,0 +1,17 @@
+{{ $offlineSearch := index site.Params "offlineSearch" }}
+{{ if $offlineSearch }}
+<div class="td-search td-search--offline">
+  <div class="td-search__icon"></div>
+  <input
+    type="search"
+    name="q"
+    class="td-search__input form-control"
+    placeholder='Search this site…'
+    aria-label='Search this site…'
+    autocomplete="off"
+    data-offline-search-index-json-src="/offline-search-index.json"
+    data-offline-search-base-href="/"
+    data-offline-search-max-results="{{ site.Params.offlineSearchMaxResults | default 10 }}"
+  >
+</div>
+{{ end }}
