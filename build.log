@@ -1,0 +1,15 @@
+Start building sites … 
+hugo v0.159.0+extended+withdeploy linux/amd64 BuildDate=unknown VendorInfo=nixpkgs
+
+
+                  │ EN 
+──────────────────┼────
+ Pages            │  8 
+ Paginator pages  │  0 
+ Non-page files   │  0 
+ Static files     │ 30 
+ Processed images │  0 
+ Aliases          │  0 
+ Cleaned          │  0 
+
+Total in 664 ms

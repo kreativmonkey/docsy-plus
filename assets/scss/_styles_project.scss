@@ -14,7 +14,7 @@
 
 /* details elements */
 details {
-    border: 1px solid $gray-200;
+    border: 1px solid #dee2e6;
     border-radius: 4px;
     padding: .5em .5em 0;
     margin-bottom: 1em;
@@ -28,7 +28,7 @@ summary {
 }
 
 details[open].normalmode{
-  border: 0px solid $gray-200;
+  border: 0px solid #dee2e6;
   border-radius: 0px;
   padding: 0em;
   margin: 0em;
